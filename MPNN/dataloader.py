@@ -15,7 +15,7 @@ class BBBPDataset(Dataset):
     def __getitem__(self, idx: int) -> Data:
         row = self.df.iloc[idx]
         # Pull extra features we computed earlier
-        extra = [row['LogP'], row['TPSA'], row['MW'], row['HBA'], row['HBD']]
+        extra = [row['LogP'], row['TPSA'], row['MW'], row['HBA'], row['HBD'], row['RotatableBonds'], row['Charge']]
         data = smiles_to_graph(row['smiles'], row['p_np'], extra)
         return data
 

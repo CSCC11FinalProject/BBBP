@@ -1,5 +1,8 @@
 # A collection of utility functions for the MPNN
 
+import logging
+logging.getLogger("rdkit").setLevel(logging.ERROR)
+
 from rdkit import Chem # type: ignore
 import torch # type: ignore
 from torch_geometric.data import Data # type: ignore
