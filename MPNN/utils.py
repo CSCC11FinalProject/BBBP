@@ -1,9 +1,9 @@
 # A collection of utility functions for the MPNN
 
-import logging
-logging.getLogger("rdkit").setLevel(logging.ERROR)
+from rdkit import rdBase  # type: ignore
+rdBase.DisableLog("rdApp.*")
 
-from rdkit import Chem # type: ignore
+from rdkit import Chem  # type: ignore
 import torch # type: ignore
 from torch_geometric.data import Data # type: ignore
 

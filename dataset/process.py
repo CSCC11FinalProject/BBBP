@@ -7,11 +7,11 @@
 # Number of Rotatable Bonds
 # Formal Charge
 
-import logging
-logging.getLogger("rdkit").setLevel(logging.ERROR)
+from rdkit import rdBase  # type: ignore
+rdBase.DisableLog("rdApp.*")
 
-from rdkit.Chem import Descriptors # type: ignore
-from rdkit import Chem # type: ignore
+from rdkit.Chem import Descriptors  # type: ignore
+from rdkit import Chem  # type: ignore
 
 import os
 import sys

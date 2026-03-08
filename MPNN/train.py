@@ -1,21 +1,26 @@
 from dataloader import BBBPDataset
 from mpnn import MPNN
 
+import os
 import torch  # type: ignore
 import torch.nn as nn  # type: ignore
 from torch_geometric.loader import DataLoader  # type: ignore
 from torch.utils.data import random_split  # type: ignore
-from torchmetrics import BinaryAUROC, BinaryF1Score  # type: ignore
+from torchmetrics import AUROC, F1Score  # type: ignore
+from tqdm import tqdm  # type: ignore
 
-CSV     = '../dataset/bbbp.csv'
-SEED    = 42
-PATIENCE = 15
+CSV_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV     = os.path.join(CSV_DIR, '..', 'dataset', 'bbbp.csv')
+CHECKPOINT_DIR = os.path.join(CSV_DIR, 'checkpoints')
+SEED    = 67
+PATIENCE = 10
 
 def train_epoch(model: MPNN, loader: DataLoader, optimizer: torch.optim.Optimizer,
-                criterion: nn.Module, device: torch.device) -> float:
+                criterion: nn.Module, device: torch.device, epoch: int) -> float:
     model.train()
     total_loss = 0.0
-    for batch in loader:
+    pbar = tqdm(loader, desc=f"Epoch {epoch}", leave=False)
+    for batch in pbar:
         batch = batch.to(device)
         optimizer.zero_grad()
         logits = model(batch).squeeze(1)
@@ -23,6 +28,7 @@ def train_epoch(model: MPNN, loader: DataLoader, optimizer: torch.optim.Optimize
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * len(batch.y)
+        pbar.set_postfix(loss=f"{loss.item():.4f}")
     return total_loss / len(loader.dataset)
 
 def evaluate(
@@ -33,10 +39,10 @@ def evaluate(
 ) -> tuple[float, float, float]:
     model.eval()
     total_loss = 0.0
-    auroc_metric = BinaryAUROC().to(device)
-    f1_metric = BinaryF1Score().to(device)
+    auroc_metric = AUROC(task="binary").to(device)
+    f1_metric = F1Score(task="binary").to(device)
     with torch.no_grad():
-        for batch in loader:
+        for batch in tqdm(loader, desc="Eval", leave=False):
             batch = batch.to(device)
             logits = model(batch).squeeze(1)
             total_loss += criterion(logits, batch.y).item() * len(batch.y)
@@ -86,21 +92,28 @@ if __name__ == "__main__":
     )
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     best_val_auc = 0.0
     best_state = None
     epochs_no_improve = 0
+    checkpoint_path = os.path.join(CHECKPOINT_DIR, 'best.pt')
 
-    for epoch in range(1, 201):
-        train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
+    for epoch in tqdm(range(1, 201), desc="Training"):
+        train_loss = train_epoch(model, train_loader, optimizer, criterion, device, epoch)
         val_loss, val_auc, val_f1 = evaluate(model, val_loader, criterion, device)
         scheduler.step(val_auc)
-        print(f"Epoch {epoch:03d} | train loss: {train_loss:.4f} | "
-              f"val loss: {val_loss:.4f} | val AUC: {val_auc:.4f} | val F1: {val_f1:.4f}")
+        tqdm.write(f"Epoch {epoch:03d} | train loss: {train_loss:.4f} | "
+                   f"val loss: {val_loss:.4f} | val AUC: {val_auc:.4f} | val F1: {val_f1:.4f}")
 
         if val_auc > best_val_auc:
             best_val_auc = val_auc
             best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
             epochs_no_improve = 0
+            torch.save({
+                'state_dict': best_state,
+                'best_val_auc': best_val_auc,
+                'epoch': epoch,
+            }, checkpoint_path)
         else:
             epochs_no_improve += 1
         if epochs_no_improve >= PATIENCE:
@@ -110,5 +123,6 @@ if __name__ == "__main__":
     if best_state is not None:
         model.load_state_dict(best_state)
         model.to(device)
+    print(f"Best model loaded from {checkpoint_path}")
     test_loss, test_auc, test_f1 = evaluate(model, test_loader, criterion, device)
     print(f"\nTest loss: {test_loss:.4f} | Test AUC-ROC: {test_auc:.4f} | Test F1: {test_f1:.4f}")
