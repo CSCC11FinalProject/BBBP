@@ -1,0 +1,1 @@
+why is the bayes so naive?

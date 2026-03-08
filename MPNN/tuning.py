@@ -10,14 +10,15 @@ import optuna  # type: ignore
 
 from dataloader import BBBPDataset
 from mpnn import MPNN
-import tqdm # type: ignore
+from tqdm import tqdm  # type: ignore
 
 CSV_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV = os.path.join(CSV_DIR, "..", "dataset", "bbbp.csv")
 CHECKPOINT_DIR = os.path.join(CSV_DIR, "checkpoints")
 SEED = 67
 PATIENCE = 10
-MAX_EPOCHS = 201
+TRIAL_MAX_EPOCHS = 20
+FINAL_MAX_EPOCHS = 201
 
 
 def train_epoch(
@@ -88,8 +89,8 @@ def run_trial(
     best_state = None
     epochs_no_improve = 0
 
-    for epoch in range(1, MAX_EPOCHS):
-        train_epoch(model, train_loader, optimizer, criterion, device)
+    for epoch in range(1, TRIAL_MAX_EPOCHS + 1):
+        train_epoch(model, train_loader, optimizer, criterion, device, epoch)
         val_loss, val_auc, val_f1 = evaluate(model, val_loader, criterion, device)
         scheduler.step(val_auc)
 
@@ -137,8 +138,10 @@ def objective(trial: optuna.Trial) -> float:
 
 
 if __name__ == "__main__":
+    # 3×3×4 = 36 combinations; run 25% (9 trials) for speed
+    n_trials = max(1, (3 * 3 * 4) // 4)
     study = optuna.create_study(direction="maximize", study_name="mpnn_bbbp")
-    study.optimize(objective, n_trials=36, show_progress_bar=True)
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
     print("\nBest trial:")
     print(f"  Val AUC-ROC: {study.best_value:.4f}")
@@ -184,8 +187,8 @@ if __name__ == "__main__":
     best_val_auc = 0.0
     best_state = None
     epochs_no_improve = 0
-    for epoch in range(1, MAX_EPOCHS):
-        train_epoch(model, train_loader, optimizer, criterion, device)
+    for epoch in range(1, FINAL_MAX_EPOCHS + 1):
+        train_epoch(model, train_loader, optimizer, criterion, device, epoch)
         val_loss, val_auc, val_f1 = evaluate(model, val_loader, criterion, device)
         scheduler.step(val_auc)
         if val_auc > best_val_auc:

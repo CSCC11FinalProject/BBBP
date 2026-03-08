@@ -85,7 +85,11 @@ if __name__ == "__main__":
     n_neg = len(train_targets) - n_pos
     pos_weight = torch.tensor([n_neg / n_pos], dtype=torch.float, device=device)
 
-    model = MPNN().to(device)
+    model = MPNN(
+        hidden_channels = 256,
+        num_layers = 3,
+        dropout = 0.2,
+    ).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='max', factor=0.5, patience=5
