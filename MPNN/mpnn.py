@@ -6,18 +6,26 @@ from torch_geometric.nn import GINConv, global_add_pool # type: ignore
 from torch_geometric.data import Data # type: ignore
 
 class MPNN(nn.Module):
-    def __init__(self, in_channels: int=20, feature_dim: int=7, hidden_channels: int=128, num_layers: int=4):
+    def __init__(
+        self,
+        in_channels: int = 20,
+        feature_dim: int = 7,
+        hidden_channels: int = 128,
+        num_layers: int = 4,
+        dropout: float = 0.3,
+    ):
         assert num_layers > 1, "Model must have at least 2 layers."
         super(MPNN, self).__init__()
         self.in_channels = in_channels
         self.feature_dim = feature_dim
         self.hidden_channels = hidden_channels
         self.num_layers = num_layers
+        self._dropout_p = dropout
 
         def GINMPL(in_dim: int, out_dim: int) -> GINConv:
             return GINConv(nn.Sequential(
                 nn.Linear(in_dim, out_dim),
-                nn.LayerNorm(out_dim), # layer norm is preferred over batch norm for GNNs
+                nn.LayerNorm(out_dim),
                 nn.ReLU(),
                 nn.Linear(out_dim, out_dim),
             ))
@@ -29,13 +37,13 @@ class MPNN(nn.Module):
         self.fusion_block = nn.Sequential(
             nn.Linear(hidden_channels + feature_dim, hidden_channels),
             nn.ReLU(),
-            nn.Dropout(p=0.3),
+            nn.Dropout(p=dropout),
             nn.Linear(hidden_channels, hidden_channels // 2),
             nn.ReLU(),
-            nn.Linear(hidden_channels // 2, 1), # single output for binary classification
+            nn.Linear(hidden_channels // 2, 1),
         )
-        self.layer_norms = nn.ModuleList([nn.LayerNorm(hidden_channels) for _ in range(num_layers-1)]) # of these
-        self.dropout = nn.Dropout(p=0.3)
+        self.layer_norms = nn.ModuleList([nn.LayerNorm(hidden_channels) for _ in range(num_layers - 1)])
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, data: Data) -> torch.Tensor:
         x, edge_index, batch, u = data.x, data.edge_index, data.batch, data.u
