@@ -56,5 +56,4 @@ class MPNN(nn.Module):
         # global pooling
         graph_embeddings = global_add_pool(h, batch)
         combined_embeddings = torch.cat([graph_embeddings, u], dim=1)
-        label = self.fusion_block(combined_embeddings)
-        return torch.sigmoid(label)
+        return self.fusion_block(combined_embeddings)  # logits for BCEWithLogitsLoss
