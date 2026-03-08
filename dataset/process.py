@@ -7,6 +7,9 @@
 # Number of Rotatable Bonds
 # Formal Charge
 
+import logging
+logging.getLogger("rdkit").setLevel(logging.ERROR)
+
 from rdkit.Chem import Descriptors # type: ignore
 from rdkit import Chem # type: ignore
 
