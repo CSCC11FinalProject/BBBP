@@ -1,0 +1,5 @@
+{
+  "n_neighbors": 43,
+  "weights": "uniform",
+  "metric": "manhattan"
+}
