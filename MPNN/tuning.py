@@ -72,12 +72,14 @@ def run_trial(
 ) -> float:
     num_layers = trial.suggest_categorical("num_layers", [3, 4, 5])
     hidden_channels = trial.suggest_categorical("hidden_channels", [64, 128, 256])
-    dropout = trial.suggest_categorical("dropout", [0.1, 0.2, 0.3, 0.4])
+    gin_dropout = trial.suggest_float("gin_dropout", 0.1, 0.3)
+    fusion_dropout = trial.suggest_float("fusion_dropout", 0.2, 0.5)
 
     model = MPNN(
         hidden_channels=hidden_channels,
         num_layers=num_layers,
-        dropout=dropout,
+        gin_dropout=gin_dropout,
+        fusion_dropout=fusion_dropout,
     ).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -138,8 +140,7 @@ def objective(trial: optuna.Trial) -> float:
 
 
 if __name__ == "__main__":
-    # 3×3×4 = 36 combinations; run 25% (9 trials) for speed
-    n_trials = max(1, (3 * 3 * 4) // 4)
+    n_trials = 10 # 10 trials for speed (we don't want to be here all day)
     study = optuna.create_study(direction="maximize", study_name="mpnn_bbbp")
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
@@ -176,7 +177,8 @@ if __name__ == "__main__":
     model = MPNN(
         hidden_channels=best["hidden_channels"],
         num_layers=best["num_layers"],
-        dropout=best["dropout"],
+        gin_dropout=best["gin_dropout"],
+        fusion_dropout=best["fusion_dropout"],
     ).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(

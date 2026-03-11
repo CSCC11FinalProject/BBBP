@@ -12,7 +12,8 @@ class MPNN(nn.Module):
         feature_dim: int = 7,
         hidden_channels: int = 128,
         num_layers: int = 4,
-        dropout: float = 0.3,
+        gin_dropout: float = 0.1,
+        fusion_dropout: float = 0.3,
     ):
         assert num_layers > 1, "Model must have at least 2 layers."
         super(MPNN, self).__init__()
@@ -20,7 +21,7 @@ class MPNN(nn.Module):
         self.feature_dim = feature_dim
         self.hidden_channels = hidden_channels
         self.num_layers = num_layers
-        self._dropout_p = dropout
+        self.gin_dropout = gin_dropout
 
         def GINMPL(in_dim: int, out_dim: int) -> GINConv:
             return GINConv(nn.Sequential(
@@ -37,13 +38,13 @@ class MPNN(nn.Module):
         self.fusion_block = nn.Sequential(
             nn.Linear(hidden_channels + feature_dim, hidden_channels),
             nn.ReLU(),
-            nn.Dropout(p=dropout),
+            nn.Dropout(p=fusion_dropout),
             nn.Linear(hidden_channels, hidden_channels // 2),
             nn.ReLU(),
             nn.Linear(hidden_channels // 2, 1),
         )
         self.layer_norms = nn.ModuleList([nn.LayerNorm(hidden_channels) for _ in range(num_layers - 1)])
-        self.dropout = nn.Dropout(p=dropout)
+        self.gin_dropout = nn.Dropout(p=gin_dropout)
 
     def forward(self, data: Data) -> torch.Tensor:
         x, edge_index, batch, u = data.x, data.edge_index, data.batch, data.u
@@ -56,7 +57,7 @@ class MPNN(nn.Module):
             h = self.conv_blocks[i](h, edge_index)
             h = self.layer_norms[i](h)
             h = F.relu(h + prev_h)
-            h = self.dropout(h)
+            h = self.gin_dropout(h)
         # last layer: conv + residual + relu (no layernorm, no dropout)
         prev_h = h
         h = self.conv_blocks[-1](h, edge_index)
