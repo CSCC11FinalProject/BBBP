@@ -6,10 +6,14 @@ import torch  # type: ignore
 import torch.nn as nn  # type: ignore
 from torch_geometric.loader import DataLoader  # type: ignore
 from torchmetrics import AUROC, F1Score  # type: ignore
-import numpy as np  # type: ignore
 from sklearn.metrics import confusion_matrix, roc_curve  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import seaborn as sns  # type: ignore
+import pandas as pd  # type: ignore
+import numpy as np  # type: ignore
+
+from rdkit import Chem  # type: ignore
+from rdkit.Chem import Draw  # type: ignore
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -27,7 +31,7 @@ def get_device() -> torch.device:
     return torch.device("cpu")
 
 
-def build_test_loader() -> DataLoader:
+def build_test_loader() -> tuple[DataLoader, pd.DataFrame]:
     dataset = BBBPDataset(CSV)
     n = len(dataset)
     n_train = int(0.8 * n)
@@ -38,7 +42,11 @@ def build_test_loader() -> DataLoader:
         [n_train, n_val, n_test],
         generator=torch.Generator().manual_seed(SEED),
     )
-    return DataLoader(test_ds, batch_size=32, shuffle=False)
+    # map back to the underlying CSV rows for analysis
+    test_indices = test_ds.indices  # type: ignore[attr-defined]
+    test_df = dataset.df.iloc[test_indices].reset_index(drop=True)  # type: ignore[attr-defined]
+    loader = DataLoader(test_ds, batch_size=32, shuffle=False)
+    return loader, test_df
 
 
 def load_model(device: torch.device) -> MPNN:
@@ -55,11 +63,57 @@ def load_model(device: torch.device) -> MPNN:
         model.load_state_dict(state)
     return model
 
+def investigate_false_positives(test_df: pd.DataFrame, probs: np.ndarray) -> None:
+    """Inspect false positives: actual 0 (BBB-) but predicted 1 (BBB+)."""
+    df = test_df.copy()
+    df["probs"] = probs
+    df["preds"] = (df["probs"] >= 0.5).astype(int)
+
+    fps = df[(df["p_np"] == 0) & (df["preds"] == 1)]
+    tns = df[(df["p_np"] == 0) & (df["preds"] == 0)]
+
+    print(f"Analyzing {len(fps)} false positives...")
+    if fps.empty:
+        return
+
+    print(fps[["name", "smiles", "LogP", "TPSA", "MW", "probs"]])
+
+    comparison = pd.DataFrame(
+        {
+            "Feature": ["LogP", "TPSA", "MW"],
+            "False Positives (Mistakes)": [
+                fps["LogP"].mean(),
+                fps["TPSA"].mean(),
+                fps["MW"].mean(),
+            ],
+            "True Negatives (Correct)": [
+                tns["LogP"].mean(),
+                tns["TPSA"].mean(),
+                tns["MW"].mean(),
+            ],
+        }
+    )
+    print(comparison)
+
+    # save full false positive rows
+    fps_path = os.path.join(PLOTS_DIR, "false_positives.csv")
+    fps.to_csv(fps_path, index=False)
+
+    # save aggregated summary as well
+    summary_path = os.path.join(PLOTS_DIR, "false_positive_summary.csv")
+    comparison.to_csv(summary_path, index=False)
+
+    # save example structures
+    mols = [Chem.MolFromSmiles(s) for s in fps["smiles"]]
+    legends = [f"Prob: {p:.2f}" for p in fps["probs"]]
+    img = Draw.MolsToGridImage(mols, molsPerRow=3, subImgSize=(300, 300), legends=legends)
+    img.save(os.path.join(PLOTS_DIR, "false_positives_structures.png"))
+
 
 def evaluate_on_test() -> None:
     os.makedirs(PLOTS_DIR, exist_ok=True)
     device = get_device()
-    test_loader = build_test_loader()
+    test_loader, test_df = build_test_loader()
     model = load_model(device)
     model.eval()
 
@@ -136,6 +190,9 @@ def evaluate_on_test() -> None:
     plt.tight_layout()
     plt.savefig(os.path.join(PLOTS_DIR, "roc_curve.png"))
     plt.close()
+
+    # qualitative analysis of false positives on the held-out test set
+    investigate_false_positives(test_df, y_prob)
 
 
 if __name__ == "__main__":
