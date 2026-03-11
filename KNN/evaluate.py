@@ -1,11 +1,11 @@
-# evaluate.py — 测试集全面评估与可视化
+# evaluate.py — Comprehensive evaluation and visualization of the test set
 #
-# 参照 MPNN/evaluate.py，产出以下内容：
-#   1. 核心指标：AUC-ROC, F1, Precision, Recall, Specificity
-#   2. 混淆矩阵热力图 → plots/confusion_matrix.png
-#   3. ROC 曲线 → plots/roc_curve.png
-#   4. False Positive 误分类分析 → plots/false_positives.csv, false_positive_summary.csv
-#   5. False Positive 分子结构图 → plots/false_positives_structures.png
+# Outputs following the structure of MPNN/evaluate.py:
+#   1. Core metrics: AUC-ROC, F1, Precision, Recall, Specificity
+#   2. Confusion matrix heatmap → plots/confusion_matrix.png
+#   3. ROC curve → plots/roc_curve.png
+#   4. False Positive misclassification analysis → plots/false_positives.csv, false_positive_summary.csv
+#   5. False Positive molecular structure plot → plots/false_positives_structures.png
 
 import os
 import joblib  # type: ignore
@@ -29,7 +29,7 @@ PLOTS_DIR = os.path.join(BASE_DIR, "plots")
 
 
 def load_model():
-    """从 checkpoint 加载已训练的 KNN 模型。"""
+    """Load a trained KNN model from checkpoint."""
     path = os.path.join(CHECKPOINT_DIR, "knn_model.joblib")
     return joblib.load(path)
 
@@ -40,9 +40,9 @@ def investigate_false_positives(
     y_pred: np.ndarray,
     y_prob: np.ndarray,
 ) -> None:
-    """分析 False Positives：实际 BBB-（不可渗透）但被预测为 BBB+（可渗透）。
+    """Analyze false positives: actually BBB- (non-permeable) but predicted as BBB+ (permeable).
 
-    与 MPNN/evaluate.py 中的同名函数保持一致的输出格式。
+    Output format is consistent with the function of the same name in MPNN/evaluate.py.
     """
     df = test_df.copy()
     df["prob"] = y_prob
@@ -59,7 +59,7 @@ def investigate_false_positives(
 
     print(fps[["name", "smiles", "LogP", "TPSA", "MW", "prob"]])
 
-    # 对比 FP 与 TN 在关键化学描述符上的均值差异
+    # Compare means of key chemical descriptors between FP and TN
     comparison = pd.DataFrame({
         "Feature": ["LogP", "TPSA", "MW"],
         "False Positives (Mistakes)": [
@@ -71,11 +71,11 @@ def investigate_false_positives(
     })
     print("\n", comparison.to_string(index=False))
 
-    # 保存到 CSV
+    # Save to CSV
     fps.to_csv(os.path.join(PLOTS_DIR, "false_positives.csv"), index=False)
     comparison.to_csv(os.path.join(PLOTS_DIR, "false_positive_summary.csv"), index=False)
 
-    # 绘制 FP 分子结构图（最多展示 9 个）
+    # Plot molecular structures for FPs (display up to 9)
     mols = [Chem.MolFromSmiles(s) for s in fps["smiles"]]
     mols = [m for m in mols if m is not None]
     if mols:
@@ -88,10 +88,10 @@ def investigate_false_positives(
 
 
 def evaluate_on_test() -> None:
-    """主评估流程：加载模型和数据 → 计算指标 → 绘图 → 误分类分析。"""
+    """Main evaluation pipeline: load model and data → compute metrics → plot → analyze misclassification."""
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
-    # ── 加载数据和模型 ──
+    # -- Load data and model --
     data = load_and_preprocess()
     X_test = data["X_test"]
     y_test = data["y_test"]
@@ -99,11 +99,11 @@ def evaluate_on_test() -> None:
 
     knn = load_model()
 
-    # ── 预测 ──
+    # -- Prediction --
     y_prob = knn.predict_proba(X_test)[:, 1]
     y_pred = (y_prob >= 0.5).astype(int)
 
-    # ── 核心指标 ──
+    # -- Core metrics --
     test_auc = roc_auc_score(y_test, y_prob)
     test_f1 = f1_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
@@ -121,7 +121,7 @@ def evaluate_on_test() -> None:
         f"Specificity: {specificity:.4f}"
     )
 
-    # ── 混淆矩阵 ──
+    # -- Confusion matrix --
     plt.figure(figsize=(4, 4))
     sns.heatmap(
         cm, annot=True, fmt="d", cmap="Blues",
@@ -134,7 +134,7 @@ def evaluate_on_test() -> None:
     plt.savefig(os.path.join(PLOTS_DIR, "confusion_matrix.png"), dpi=150)
     plt.close()
 
-    # ── ROC 曲线 ──
+    # -- ROC curve --
     fpr, tpr, _ = roc_curve(y_test, y_prob)
     plt.figure(figsize=(4, 4))
     plt.plot(fpr, tpr, label=f"AUC = {test_auc:.3f}")
@@ -149,7 +149,7 @@ def evaluate_on_test() -> None:
 
     print(f"\nPlots saved to {PLOTS_DIR}/")
 
-    # ── False Positive 分析 ──
+    # -- False Positive analysis --
     investigate_false_positives(test_df, y_test, y_pred, y_prob)
 
 
