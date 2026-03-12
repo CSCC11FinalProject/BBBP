@@ -3,4 +3,5 @@ why is the bayes so naive?
 - dont forget to scale the data
 - convert the smiles to numeric (check the utils in dataset folder)
 - use correlation matrix to decide which features you want to leave out and why
-- evaluation: compute F1 and AUROC because the dataset has class imbalance
+- **80/10/10 Train/Val/Test**
+- **evaluation: compute F1 and AUROC because the dataset has class imbalance** DO THIS!!
