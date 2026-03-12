@@ -1,1 +1,16 @@
+Frist: Data Collection
+Answer:
 
+We used BBBP.csv file from Kaggle.com, it contains
+"name" - Name of the compound
+"smiles" - SMILES representation of the molecular structure
+"p_np" - Binary labels for penetration/non-penetration
+
+Second: Present the data exploration results using figures and statistical summaries
+Answer: 
+
+
+
+Third: the data cleaning and feature engineering I performed:
+
+Answer: We 
