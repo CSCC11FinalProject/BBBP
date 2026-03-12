@@ -33,7 +33,7 @@ df = df.drop(columns=ext_large_cols)
 X = df.select_dtypes(include=["number"]).drop(columns=[label])
 print(X.max().sort_values(ascending=False).head(5))
 
-# use random forest to select top 5 predictors:
+# use random forest to select top 10 predictors:
 rf = RandomForestClassifier(n_estimators=400, random_state=0)
 rf.fit(X, y)
 importances = rf.feature_importances_
@@ -42,10 +42,10 @@ feature_importance_df = pd.DataFrame({
     "importance": importances
 }).sort_values(by="importance", ascending=False)
 
-top_5_features_rf = feature_importance_df.head(5)["feature"].tolist()
-print("Top 5 predictors:", top_5_features_rf)
+top_10_features_rf = feature_importance_df.head(10)["feature"].tolist()
+print("Top 10 predictors:", top_10_features_rf)
 
-# Use LassoCV to selct top 5 predictors:
+# Use LassoCV to selct top 10 predictors:
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 lasso = LassoCV(cv=5, random_state=0, max_iter=10000)
@@ -56,11 +56,11 @@ lasso_coefs = pd.DataFrame({
 })
 non_zero_coef = lasso_coefs[lasso_coefs["coef"] != 0].copy()
 non_zero_coef["abs_coef"] = non_zero_coef["coef"].abs()
-top_5_features_lasso = non_zero_coef.sort_values(by="abs_coef", ascending=False).head(5)["feature"].tolist()
-print("Top 5 predictors from LassoCV:", top_5_features_lasso)
+top_10_features_lasso = non_zero_coef.sort_values(by="abs_coef", ascending=False).head(10)["feature"].tolist()
+print("Top 10 predictors from LassoCV:", top_10_features_lasso)
 
-# select the union of the top 5 predictors from both methods:
-top_refined_features = list(set(top_5_features_rf) | set(top_5_features_lasso))
+# select the union of the top 10 predictors from both methods:
+top_refined_features = list(set(top_10_features_rf) | set(top_10_features_lasso))
 print("Top Refined predictors from both methods:", top_refined_features)
 
 # save only the refined predictors and the label to a new CSV file:
