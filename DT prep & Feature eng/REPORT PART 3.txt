@@ -1,4 +1,4 @@
-Frist: Data Collection
+///Frist: Data Collection///
 Answer:
 
 We used BBBP.csv file from Kaggle.com, it contains
@@ -6,11 +6,35 @@ We used BBBP.csv file from Kaggle.com, it contains
 "smiles" - SMILES representation of the molecular structure
 "p_np" - Binary labels for penetration/non-penetration
 
-Second: Present the data exploration results using figures and statistical summaries
-Answer: 
+///Second: Present the data exploration results using figures and statistical summaries///
+Answer:
+
+Originally, the SMILES representation of the molecular structure in BBBP.csv is in string form, which is hard to do classification based only on this.
+We used "rdkit" module in python to extract features from each molecule's SMILES representation.
+We stored all features extracted with corresponding penetration labels in a .csv file "BBBP_all_rdkit_descriptors.csv"
+
+///Third: Data Cleaning & Feature Engineering///
+Answer:
+
+Then, we cleaned data in the following workflow:
+
+1. We removed rows that contain NA values first, as the number of missing value rows is small (we found xx rows from the output).
+2. We only keep one among identical rows (we found xx rows from the output).
+3. We deleted columns that have the same value for every molecule, this does not provide any valuable information when classifying (we found xx columns from the output).
+4. To avoid overflow when computing, we deleted columns that contain values that is extreme (in 1e20 threshold, we found xx columns from the output).
+5. We now combine cleaned features with corresponding labels, this gives us a primary usable dataset.
+
+We selected key features by Hybrid Feature Selection to avoid the situation that feature selection only depends on linear or non-linear solely.
+
+1. We use the importance in Random Forest as the metric to select the top 5 features voted by Random Forest.
+2. We use the magnitude of coefficients computed by LASSO as the metric to select the top 5 features voted by LASSO.
+3. We used the union of features voted from Random Forest and LASSO.
+4. We got 9 features at last, this size is not too small or large, which is suitable for training models.
+
+In this way, we got features that was voted both from non-linear and linear models, this will guarantee that the model we trained will capture both non-linear and linear
+structures.
+
+///Third: figures and statistical summaries for data we lastly selected///
+Answer:
 
 
-
-Third: the data cleaning and feature engineering I performed:
-
-Answer: We 
