@@ -6,6 +6,8 @@ We used BBBP.csv file from Kaggle.com, it contains
 "smiles" - SMILES representation of the molecular structure
 "p_np" - Binary labels for penetration/non-penetration
 
+---Describe the size of the data HERE, with the description for labels, you should mention: dataset imbalance---
+
 ///Second: Present the data exploration results using figures and statistical summaries///
 Answer:
 
@@ -34,7 +36,15 @@ We selected key features by Hybrid Feature Selection to avoid the situation that
 In this way, we got features that was voted both from non-linear and linear models, this will guarantee that the model we trained will capture both non-linear and linear
 structures.
 
+Thus the feature format is: each molecule is represented as a feature vector consisting of the selected molecular descriptors.
+
 ///Third: figures and statistical summaries for data we lastly selected///
 Answer:
 
+///Fourth: data splitting///
+Answer:
+
+We split the dataset into training and testing sets using an 80/20 random split, with random state 0 to ensure the reproducibility.
+The training set was used to train the model, while the testing set was used for performance evaluation.
+We also split 10% of training set for the tuning of hyperparamters for each classifier.
 
