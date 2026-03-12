@@ -13,7 +13,7 @@ from mpnn import MPNN
 from tqdm import tqdm  # type: ignore
 
 CSV_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV = os.path.join(CSV_DIR, "..", "dataset", "bbbp.csv")
+CSV = os.path.join(CSV_DIR, "..", "dataset", "BBBP.csv")
 CHECKPOINT_DIR = os.path.join(CSV_DIR, "checkpoints")
 SEED = 67
 PATIENCE = 10
@@ -70,10 +70,10 @@ def run_trial(
     val_loader: DataLoader,
     pos_weight: torch.Tensor,
 ) -> float:
-    num_layers = trial.suggest_categorical("num_layers", [3, 4, 5])
+    num_layers = trial.suggest_categorical("num_layers", [3, 4])
     hidden_channels = trial.suggest_categorical("hidden_channels", [64, 128, 256])
-    gin_dropout = trial.suggest_float("gin_dropout", 0.1, 0.3)
-    fusion_dropout = trial.suggest_float("fusion_dropout", 0.2, 0.5)
+    gin_dropout = trial.suggest_categorical("gin_dropout", [0.1, 0.2, 0.3])
+    fusion_dropout = trial.suggest_categorical("fusion_dropout", [0.2, 0.3, 0.4, 0.5])
 
     model = MPNN(
         hidden_channels=hidden_channels,
@@ -95,6 +95,11 @@ def run_trial(
         train_epoch(model, train_loader, optimizer, criterion, device, epoch)
         val_loss, val_auc, val_f1 = evaluate(model, val_loader, criterion, device)
         scheduler.step(val_auc)
+
+        # report intermediate AUC to Optuna and allow pruning of bad trials
+        trial.report(val_auc, step=epoch)
+        if trial.should_prune():
+            raise optuna.TrialPruned()
 
         if val_auc > best_val_auc:
             best_val_auc = val_auc
@@ -140,8 +145,13 @@ def objective(trial: optuna.Trial) -> float:
 
 
 if __name__ == "__main__":
-    n_trials = 10 # 10 trials for speed (we don't want to be here all day)
-    study = optuna.create_study(direction="maximize", study_name="mpnn_bbbp")
+    n_trials = 16  # 16 trials across discrete grid
+    study = optuna.create_study(
+        direction="maximize",
+        study_name="mpnn_bbbp",
+        sampler=optuna.samplers.TPESampler(multivariate=True, group=True),
+        pruner=optuna.pruners.MedianPruner(n_startup_trials=3, n_warmup_steps=5),
+    )
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
     print("\nBest trial:")

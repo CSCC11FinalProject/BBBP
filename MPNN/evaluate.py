@@ -17,8 +17,8 @@ from rdkit.Chem import Draw  # type: ignore
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV = os.path.join(BASE_DIR, "..", "dataset", "bbbp.csv")
-CHECKPOINT_PATH = os.path.join(BASE_DIR, "checkpoints", "best_tuned.pt")
+CSV = os.path.join(BASE_DIR, "..", "dataset", "BBBP.csv")
+CHECKPOINT_PATH = os.path.join(BASE_DIR, "checkpoints", "best.pt")
 PLOTS_DIR = os.path.join(BASE_DIR, "plots")
 SEED = 67
 
@@ -51,16 +51,30 @@ def build_test_loader() -> tuple[DataLoader, pd.DataFrame]:
 
 def load_model(device: torch.device) -> MPNN:
     checkpoint = torch.load(CHECKPOINT_PATH, map_location=device)
+    state = checkpoint.get("state_dict", checkpoint)
+
+    # try to get hyperparameters from checkpoint if present
     params = checkpoint.get("params", {})
+    hidden_channels = params.get("hidden_channels")
+    num_layers = params.get("num_layers")
+    gin_dropout = params.get("gin_dropout", 0.1)
+    fusion_dropout = params.get("fusion_dropout", 0.3)
+
+    # fallback: infer hidden_channels and num_layers from the state dict
+    if hidden_channels is None:
+        w0 = state["conv_blocks.0.nn.0.weight"]
+        hidden_channels = int(w0.shape[0])
+    if num_layers is None:
+        conv_layer_keys = [k for k in state.keys() if k.startswith("conv_blocks.") and k.endswith(".nn.0.weight")]
+        num_layers = len(conv_layer_keys)
+
     model = MPNN(
-        hidden_channels=params.get("hidden_channels", 128),
-        num_layers=params.get("num_layers", 4),
-        gin_dropout=params.get("gin_dropout", 0.1),
-        fusion_dropout=params.get("fusion_dropout", 0.3),
+        hidden_channels=hidden_channels,
+        num_layers=num_layers,
+        gin_dropout=gin_dropout,
+        fusion_dropout=fusion_dropout,
     ).to(device)
-    state = checkpoint.get("state_dict")
-    if state is not None:
-        model.load_state_dict(state)
+    model.load_state_dict(state)
     return model
 
 def investigate_false_positives(test_df: pd.DataFrame, probs: np.ndarray) -> None:

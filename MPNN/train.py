@@ -2,6 +2,8 @@ from dataloader import BBBPDataset
 from mpnn import MPNN
 
 import os
+import random
+import numpy as np # type: ignore
 import torch  # type: ignore
 import torch.nn as nn  # type: ignore
 from torch_geometric.loader import DataLoader  # type: ignore
@@ -10,11 +12,17 @@ from torchmetrics import AUROC, F1Score  # type: ignore
 from tqdm import tqdm  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 
+# --- STRICT SEEDING TO LOCK RESULTS ---
+SEED = 67
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+
+
 CSV_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV     = os.path.join(CSV_DIR, '..', 'dataset', 'BBBP.csv')
 CHECKPOINT_DIR = os.path.join(CSV_DIR, 'checkpoints')
 PLOTS_DIR = os.path.join(CSV_DIR, 'plots')
-SEED    = 67
 PATIENCE = 10
 
 def train_epoch(model: MPNN, loader: DataLoader, optimizer: torch.optim.Optimizer,
@@ -84,22 +92,28 @@ if __name__ == "__main__":
     test_loader  = DataLoader(test_ds,  batch_size=32, shuffle=False)
     print(f"Dataset split — train: {n_train}, val: {n_val}, test: {n_test}")
 
-    # Class balance for BCEWithLogitsLoss: pos_weight = n_neg/n_pos on training set
+    # Class balance for BCEWithLogitsLoss
     train_targets = [dataset.df.iloc[i]['p_np'] for i in train_ds.indices]
     n_pos = sum(1 for t in train_targets if t == 1)
     n_neg = len(train_targets) - n_pos
     pos_weight = torch.tensor([n_neg / n_pos], dtype=torch.float, device=device)
+    
+    # Initialize the tuned GIN-based MPNN (best params from Optuna)
     model = MPNN(
-        hidden_channels = 256,
-        num_layers = 4,
-        gin_dropout = 0.10,
-        fusion_dropout = 0.25,
+        in_channels=29,
+        feature_dim=7,
+        hidden_channels=64,
+        num_layers=4,
+        gin_dropout=0.1407236759323333,
+        fusion_dropout=0.2573750569253682,
     ).to(device)
+    
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='max', factor=0.5, patience=5
     )
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    
     best_val_auc = 0.0
     best_state = None
     epochs_no_improve = 0
@@ -135,7 +149,6 @@ if __name__ == "__main__":
             print(f"Early stopping at epoch {epoch} (no val AUC improvement for {PATIENCE} epochs).")
             break
 
-    # save loss curves
     if epochs_tracked:
         plt.figure(figsize=(6, 4))
         plt.plot(epochs_tracked, train_losses, label="Train loss")
