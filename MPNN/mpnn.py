@@ -1,68 +1,83 @@
 import torch # type: ignore
 import torch.nn as nn # type: ignore
-import torch.nn.functional as F # type: ignore
-
-from torch_geometric.nn import GINConv, global_add_pool # type: ignore
+from torch_geometric.nn import NNConv # type: ignore
 from torch_geometric.data import Data # type: ignore
+from torch_geometric.utils import to_dense_batch # type: ignore
 
 class MPNN(nn.Module):
     def __init__(
-        self,
-        in_channels: int = 20,
-        feature_dim: int = 7,
-        hidden_channels: int = 128,
-        num_layers: int = 4,
-        gin_dropout: float = 0.1,
-        fusion_dropout: float = 0.3,
+        self, 
+        atom_dim: int = 29, 
+        bond_dim: int = 7, 
+        tabular_dim: int = 7,
+        message_units: int = 64, 
+        message_steps: int = 4, 
+        num_attention_heads: int = 8, 
+        dense_units: int = 512
     ):
-        assert num_layers > 1, "Model must have at least 2 layers."
         super(MPNN, self).__init__()
-        self.in_channels = in_channels
-        self.feature_dim = feature_dim
-        self.hidden_channels = hidden_channels
-        self.num_layers = num_layers
-        self.gin_dropout = gin_dropout
-
-        def GINMPL(in_dim: int, out_dim: int) -> GINConv:
-            return GINConv(nn.Sequential(
-                nn.Linear(in_dim, out_dim),
-                nn.LayerNorm(out_dim),
-                nn.ReLU(),
-                nn.Linear(out_dim, out_dim),
-            ))
-
-        self.conv_blocks = nn.ModuleList(
-            [GINMPL(in_channels, hidden_channels)] +
-            [GINMPL(hidden_channels, hidden_channels) for _ in range(num_layers - 1)]
+        self.message_steps = message_steps
+        self.message_units = message_units
+        
+        self.pad_length = max(0, message_units - atom_dim)
+        self.node_dim = atom_dim + self.pad_length
+        
+        edge_nn = nn.Linear(bond_dim, self.node_dim * self.node_dim)
+        self.conv = NNConv(self.node_dim, self.node_dim, edge_nn, aggr='add', root_weight=False)
+        self.gru = nn.GRUCell(self.node_dim, self.node_dim)
+        
+        self.self_attention = nn.MultiheadAttention(
+            embed_dim=self.node_dim, 
+            num_heads=num_attention_heads, 
+            batch_first=True
         )
-        self.fusion_block = nn.Sequential(
-            nn.Linear(hidden_channels + feature_dim, hidden_channels),
+        self.dense_proj = nn.Sequential(
+            nn.Linear(self.node_dim, dense_units),
             nn.ReLU(),
-            nn.Dropout(p=fusion_dropout),
-            nn.Linear(hidden_channels, hidden_channels // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_channels // 2, 1),
+            nn.Linear(dense_units, self.node_dim)
         )
-        self.layer_norms = nn.ModuleList([nn.LayerNorm(hidden_channels) for _ in range(num_layers - 1)])
-        self.gin_dropout = nn.Dropout(p=gin_dropout)
+        self.layernorm_1 = nn.LayerNorm(self.node_dim)
+        self.layernorm_2 = nn.LayerNorm(self.node_dim)
+        
+        # FUSION: Transformer output (node_dim) + your tabular features (tabular_dim)
+        self.classification = nn.Sequential(
+            nn.Linear(self.node_dim + tabular_dim, dense_units),
+            nn.ReLU(),
+            nn.Dropout(0.2), 
+            nn.Linear(dense_units, 1)
+        )
 
     def forward(self, data: Data) -> torch.Tensor:
-        x, edge_index, batch, u = data.x, data.edge_index, data.batch, data.u
-        # first layer: conv + layernorm + relu
-        h = self.conv_blocks[0](x, edge_index)
-        h = F.relu(self.layer_norms[0](h))
-        # middle layers: conv + layernorm + residual + relu + dropout
-        for i in range(1, self.num_layers - 1):
-            prev_h = h
-            h = self.conv_blocks[i](h, edge_index)
-            h = self.layer_norms[i](h)
-            h = F.relu(h + prev_h)
-            h = self.gin_dropout(h)
-        # last layer: conv + residual + relu (no layernorm, no dropout)
-        prev_h = h
-        h = self.conv_blocks[-1](h, edge_index)
-        h = F.relu(h + prev_h)
-        # global pooling
-        graph_embeddings = global_add_pool(h, batch)
-        combined_embeddings = torch.cat([graph_embeddings, u], dim=1)
-        return self.fusion_block(combined_embeddings)  # logits for BCEWithLogitsLoss
+        x, edge_index, edge_attr, batch, u = data.x, data.edge_index, data.edge_attr, data.batch, data.u
+        
+        if self.pad_length > 0:
+            padding = torch.zeros(x.size(0), self.pad_length, device=x.device)
+            x = torch.cat([x, padding], dim=-1)
+            
+        h = x
+        for _ in range(self.message_steps):
+            m = self.conv(h, edge_index, edge_attr)
+            h = self.gru(m, h)
+            
+        dense_x, mask = to_dense_batch(h, batch)
+        key_padding_mask = ~mask 
+        
+        attn_out, _ = self.self_attention(
+            query=dense_x, 
+            key=dense_x, 
+            value=dense_x, 
+            key_padding_mask=key_padding_mask
+        )
+        
+        proj_input = self.layernorm_1(dense_x + attn_out)
+        proj_output = self.layernorm_2(proj_input + self.dense_proj(proj_input))
+        
+        mask_expanded = mask.unsqueeze(-1).float()
+        sum_pool = torch.sum(proj_output * mask_expanded, dim=1)
+        valid_node_counts = mask.sum(dim=1, keepdim=True).clamp(min=1)
+        pooled = sum_pool / valid_node_counts
+        
+        # Concatenate Graph embedding with the 7 Tabular Features
+        combined_embeddings = torch.cat([pooled, u], dim=1)
+        
+        return self.classification(combined_embeddings)

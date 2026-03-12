@@ -80,8 +80,8 @@ if __name__ == "__main__":
 
     dataset = BBBPDataset(CSV)
     n       = len(dataset)
-    n_train = int(0.8 * n)
-    n_val   = int(0.1 * n)
+    n_train = int(0.75 * n)
+    n_val   = int(0.10 * n)
     n_test  = n - n_train - n_val
     train_ds, val_ds, test_ds = random_split(
         dataset, [n_train, n_val, n_test],
@@ -98,15 +98,7 @@ if __name__ == "__main__":
     n_neg = len(train_targets) - n_pos
     pos_weight = torch.tensor([n_neg / n_pos], dtype=torch.float, device=device)
     
-    # Initialize the tuned GIN-based MPNN (best params from Optuna)
-    model = MPNN(
-        in_channels=29,
-        feature_dim=7,
-        hidden_channels=64,
-        num_layers=4,
-        gin_dropout=0.1407236759323333,
-        fusion_dropout=0.2573750569253682,
-    ).to(device)
+    model = MPNN().to(device) # NEVER PULL FROM OPTUNA
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(

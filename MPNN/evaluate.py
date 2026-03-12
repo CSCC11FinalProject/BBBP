@@ -34,7 +34,7 @@ def get_device() -> torch.device:
 def build_test_loader() -> tuple[DataLoader, pd.DataFrame]:
     dataset = BBBPDataset(CSV)
     n = len(dataset)
-    n_train = int(0.8 * n)
+    n_train = int(0.75 * n)
     n_val = int(0.1 * n)
     n_test = n - n_train - n_val
     _, _, test_ds = torch.utils.data.random_split(  # type: ignore[attr-defined]
@@ -50,31 +50,27 @@ def build_test_loader() -> tuple[DataLoader, pd.DataFrame]:
 
 
 def load_model(device: torch.device) -> MPNN:
+    """
+    Load the current MPNN architecture and weights.
+
+    We always reconstruct the model using the same defaults as train.py:
+      atom_dim=29, bond_dim=7, tabular_dim=7,
+      message_units=64, message_steps=4,
+      num_attention_heads=8, dense_units=512.
+    """
     checkpoint = torch.load(CHECKPOINT_PATH, map_location=device)
     state = checkpoint.get("state_dict", checkpoint)
 
-    # try to get hyperparameters from checkpoint if present
-    params = checkpoint.get("params", {})
-    hidden_channels = params.get("hidden_channels")
-    num_layers = params.get("num_layers")
-    gin_dropout = params.get("gin_dropout", 0.1)
-    fusion_dropout = params.get("fusion_dropout", 0.3)
-
-    # fallback: infer hidden_channels and num_layers from the state dict
-    if hidden_channels is None:
-        w0 = state["conv_blocks.0.nn.0.weight"]
-        hidden_channels = int(w0.shape[0])
-    if num_layers is None:
-        conv_layer_keys = [k for k in state.keys() if k.startswith("conv_blocks.") and k.endswith(".nn.0.weight")]
-        num_layers = len(conv_layer_keys)
-
     model = MPNN(
-        hidden_channels=hidden_channels,
-        num_layers=num_layers,
-        gin_dropout=gin_dropout,
-        fusion_dropout=fusion_dropout,
+        atom_dim=29,
+        bond_dim=7,
+        tabular_dim=7,
+        message_units=64,
+        message_steps=4,
+        num_attention_heads=8,
+        dense_units=512,
     ).to(device)
-    model.load_state_dict(state)
+    model.load_state_dict(state, strict=False)
     return model
 
 def investigate_false_positives(test_df: pd.DataFrame, probs: np.ndarray) -> None:
@@ -90,7 +86,8 @@ def investigate_false_positives(test_df: pd.DataFrame, probs: np.ndarray) -> Non
     if fps.empty:
         return
 
-    print(fps[["name", "smiles", "LogP", "TPSA", "MW", "probs"]])
+    cols_to_show = [c for c in ["name", "smiles", "LogP", "TPSA", "MW", "probs"] if c in fps.columns]
+    print(fps[cols_to_show])
 
     comparison = pd.DataFrame(
         {
