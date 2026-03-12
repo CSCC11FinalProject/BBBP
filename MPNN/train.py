@@ -8,10 +8,12 @@ from torch_geometric.loader import DataLoader  # type: ignore
 from torch.utils.data import random_split  # type: ignore
 from torchmetrics import AUROC, F1Score  # type: ignore
 from tqdm import tqdm  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
 
 CSV_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV     = os.path.join(CSV_DIR, '..', 'dataset', 'bbbp.csv')
+CSV     = os.path.join(CSV_DIR, '..', 'dataset', 'BBBP.csv')
 CHECKPOINT_DIR = os.path.join(CSV_DIR, 'checkpoints')
+PLOTS_DIR = os.path.join(CSV_DIR, 'plots')
 SEED    = 67
 PATIENCE = 10
 
@@ -65,6 +67,9 @@ if __name__ == "__main__":
         device = torch.device('cpu')
     print(f"Using device: {device}")
 
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+
     dataset = BBBPDataset(CSV)
     n       = len(dataset)
     n_train = int(0.8 * n)
@@ -84,28 +89,34 @@ if __name__ == "__main__":
     n_pos = sum(1 for t in train_targets if t == 1)
     n_neg = len(train_targets) - n_pos
     pos_weight = torch.tensor([n_neg / n_pos], dtype=torch.float, device=device)
-
     model = MPNN(
         hidden_channels = 256,
-        num_layers = 3,
-        dropout = 0.2,
+        num_layers = 4,
+        gin_dropout = 0.10,
+        fusion_dropout = 0.25,
     ).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='max', factor=0.5, patience=5
     )
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-
-    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     best_val_auc = 0.0
     best_state = None
     epochs_no_improve = 0
     checkpoint_path = os.path.join(CHECKPOINT_DIR, 'best.pt')
 
+    epochs_tracked: list[int] = []
+    train_losses: list[float] = []
+    val_losses: list[float] = []
+
     for epoch in tqdm(range(1, 201), desc="Training"):
         train_loss = train_epoch(model, train_loader, optimizer, criterion, device, epoch)
         val_loss, val_auc, val_f1 = evaluate(model, val_loader, criterion, device)
         scheduler.step(val_auc)
+        epochs_tracked.append(epoch)
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
+
         tqdm.write(f"Epoch {epoch:03d} | train loss: {train_loss:.4f} | "
                    f"val loss: {val_loss:.4f} | val AUC: {val_auc:.4f} | val F1: {val_f1:.4f}")
 
@@ -123,6 +134,19 @@ if __name__ == "__main__":
         if epochs_no_improve >= PATIENCE:
             print(f"Early stopping at epoch {epoch} (no val AUC improvement for {PATIENCE} epochs).")
             break
+
+    # save loss curves
+    if epochs_tracked:
+        plt.figure(figsize=(6, 4))
+        plt.plot(epochs_tracked, train_losses, label="Train loss")
+        plt.plot(epochs_tracked, val_losses, label="Val loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("MPNN Training and Validation Loss")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(PLOTS_DIR, "loss_curves.png"))
+        plt.close()
 
     if best_state is not None:
         model.load_state_dict(best_state)
