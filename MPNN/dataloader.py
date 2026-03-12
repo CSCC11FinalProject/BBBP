@@ -61,6 +61,28 @@ if __name__ == "__main__":
     df = dataset.df
     sns.set_theme(style="darkgrid")
 
+    # class distribution
+    plt.figure(figsize=(6, 4))
+    sns.countplot(x="p_np", data=df, palette="viridis")
+    plt.title("Distribution of BBB Permeability (p_np)")
+    plt.xlabel("Permeability (0: No, 1: Yes)")
+    plt.ylabel("Count")
+    plt.tight_layout()
+    plt.savefig(os.path.join(plots_dir, "class_distribution.png"))
+    plt.close()
+
+    # key feature distributions
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    sns.boxplot(ax=axes[0], x="p_np", y="LogP", data=df, palette="Set2")
+    axes[0].set_title("LogP vs Permeability")
+    sns.boxplot(ax=axes[1], x="p_np", y="TPSA", data=df, palette="Set2")
+    axes[1].set_title("TPSA vs Permeability")
+    sns.boxplot(ax=axes[2], x="p_np", y="MW", data=df, palette="Set2")
+    axes[2].set_title("Molecular Weight vs Permeability")
+    plt.tight_layout()
+    plt.savefig(os.path.join(plots_dir, "feature_distributions.png"))
+    plt.close()
+
     # correlation matrix on core numeric descriptors
     plt.figure(figsize=(8, 8))
     corr_cols = ["LogP", "TPSA", "MW", "HBA", "HBD", "RotatableBonds", "Charge", "p_np"]
