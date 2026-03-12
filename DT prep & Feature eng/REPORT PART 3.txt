@@ -15,6 +15,8 @@ Originally, the SMILES representation of the molecular structure in BBBP.csv is 
 We used "rdkit" module in python to extract features from each molecule's SMILES representation.
 We stored all features extracted with corresponding penetration labels in a .csv file "BBBP_all_rdkit_descriptors.csv"
 
+---VISUALS for this---
+
 ///Third: Data Cleaning & Feature Engineering///
 Answer:
 
@@ -40,6 +42,8 @@ Thus the feature format is: each molecule is represented as a feature vector con
 
 ///Third: figures and statistical summaries for data we lastly selected///
 Answer:
+
+---VISUALS for this---
 
 ///Fourth: data splitting///
 Answer:
