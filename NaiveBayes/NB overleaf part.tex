@@ -1,0 +1,218 @@
+\documentclass{article}
+
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+
+\begin{document}
+
+\section{NB Part Report}
+
+\subsection{Data Collection, Preprocessing, and Representation}
+
+About Data Cleaning and Feature Engineering for Naive Bayes part, we cleaned data in the following workflow:
+
+About cleaning: We removed rows that contain NA values first; and we should only keep one among identical rows; we deleted columns that have the same value for every molecule (i.e. zero variance among this row), this does not provide any valuable information when classifying. To avoid overflow when computing, we deleted columns that contain values that is extreme (above $10^{20}$ threshold). After deleting these rows and columns, we still have 2021 rows of samples, 216 RDKit features and 2045 columns of Morgan fingerprint features, this gives us a primary usable dataset.
+
+About selection: We decided to split into two parts of features for different types of Naive Bayes Models, as almost all of the features in Morgan fingerprints are binary. In this way, training Bernoulli Naive Bayes Model is better than training Gaussian Naive Bayes Model using these binary features. However, we still hold RDKit features for training Gaussian Naive Bayes Model. We will compare the performance using these two types of models afterwards to decide which one is better. 
+
+For Gaussian Model, we don’t want too many features for efficiency. We selected key RDKit features by Hybrid Feature Selection method to avoid the situation that feature selection only depends on linear or non-linear solely: We use the importance in Random Forest as the ranking to select the top 6 features voted by Random Forest. Then we use the absolute value of coefficients computed by LASSO as the ranking to select the top 6 features voted by LASSO. We used the union of features voted from Random Forest and LASSO, we got 10 features after selection, this size is not too small or large, which is suitable for training models. In this way, we got features that was voted both from non-linear and linear models, this will guarantee that the model we trained will capture both non-linear and linear structures. Furthermore, we artificially disposed columns that exhibit strong correlation among RDKit features.
+
+Here is the Heatmap before removing highly correlated RDKit features:
+
+From this heatmap, we can see that “NOCount”, “NumHeteroatoms”, “TPSA”, and “VSA\_EState3” are four ones that have correlation with most of the selected RDKit features. We decided to save “TPSA” as it was shown that it is more critical when predicting BBBP.
+
+Here is the Heatmap after removing highly correlated RDKit features:
+
+This is more suitable for training Naive Bayes Models now, as a critical assumption is that features are conditionally independent.
+
+About data splitting: We split the dataset into training validation and testing sets using an 75/10/15 random split, with stratifying to maintain the distribution among these three sets and a random state 0 to ensure the reproducibility. The training set was used to train the model, the validation set was to find out which type of model (Gaussian or Bernoulli Naive Bayes Model) has a better performance, while the testing set was used for final Naive Bayes Model performance evaluation.
+
+\subsection{NB Model Part}
+
+The reason why we chose Naive Bayes Method as one of the models
+is that Naive Bayes assumes strong conditional independency among
+features. However, molecule's property is heuristically related to many
+highly correlated features of a molecule. We will see how a Naive Bayes Method's result is not as good as our final advanced model even if we tried
+our best to do model-specific feature engineering and model ensemble.
+
+With the thoroughly preprocessed data for Naive Bayes, we will now building the model:
+
+As stated in the feature engineering part, we essentially will assume a distribution for each features. However, RDKit part of the features is continuous, while almost all of the Morgan fingerprints features are binary. Thus, we will first train two models with validation set:
+
+Gaussian Naive Bayes Model with RDKit part of features and Bernoulli Naive Bayes Model with Morgan fingerprints Part of features.
+
+Naive Bayes method does not care about hyperparameter tuning, but here
+we will use validation set to check two types of Naive Bayes model, and
+use the accuracy when predicting among label 0 as an important metric
+to decide the model:
+
+\begin{table}[h]
+\centering
+\caption{Validation Performance of Gaussian Naive Bayes (Descriptors)}
+\begin{tabular}{c|cc}
+\hline
+\textbf{Actual / Predicted} & \textbf{0} & \textbf{1} \\
+\hline
+\textbf{0} & 27 & 20 \\
+\textbf{1} & 5 & 150 \\
+\hline
+\end{tabular}
+
+\vspace{0.3cm}
+
+\begin{tabular}{lc}
+\hline
+Validation Accuracy & 0.8762 \\
+F1 Score & 0.8673 \\
+\hline
+\end{tabular}
+
+\end{table}
+
+And
+
+\begin{table}[h]
+\centering
+\caption{Validation Performance of Bernoulli Naive Bayes (Morgan Fingerprints)}
+\begin{tabular}{c|cc}
+\hline
+\textbf{Actual / Predicted} & \textbf{0} & \textbf{1} \\
+\hline
+\textbf{0} & 33 & 14 \\
+\textbf{1} & 7 & 148 \\
+\hline
+\end{tabular}
+
+\vspace{0.3cm}
+
+\begin{tabular}{lc}
+\hline
+Validation Accuracy & 0.8960 \\
+F1 Score & 0.8930 \\
+\hline
+\end{tabular}
+
+\end{table}
+
+We found that each model will have different advantages when predicting each specific class:
+
+For Gaussian Naive Bayes, the accuracy for predicting label 0 is
+
+\[
+\frac{27}{27+20} = \frac{27}{47} = 0.574
+\]
+
+and the accuracy for predicting label 1 is
+
+\[
+\frac{150}{150+5} = \frac{150}{155} = 0.968
+\]
+
+For Bernoulli Naive Bayes, the accuracy for predicting label 0 is
+
+\[
+\frac{33}{33+14} = \frac{33}{47} = 0.702
+\]
+
+and the accuracy for predicting label 1 is
+
+\[
+\frac{148}{148+7} = \frac{148}{155} = 0.955
+\]
+
+Here is an organized table:
+
+\begin{table}[h]
+\centering
+\caption{Class-wise Accuracy Comparison Between GaussianNB and BernoulliNB}
+\begin{tabular}{lcc}
+\hline
+Model & Label 0 Accuracy & Label 1 Accuracy \\
+\hline
+Gaussian Naive Bayes & 0.574 & 0.968 \\
+Bernoulli Naive Bayes & 0.702 & 0.955 \\
+\hline
+\end{tabular}
+\end{table}
+
+Thus, we can see that Bernoulli Naive Bayes model performs evidently better
+when predicting label 0 ones, and Gaussian Naive Bayes model performs
+slightly better when predicting label 1 ones.
+
+Thus, we decided to Ensemble these two models: we will fully trust Bernoulli
+Naive Bayes Model when it predicts a label 0; in all other cases, we will fully trust Gaussian Naive Bayes Model.
+
+After ensembling, we got the following result report:
+
+The final testing performance of the Ensemble Naive Bayes Model is shown below.
+
+\begin{table}[h]
+\centering
+\caption{Test Confusion Matrix of Ensemble Naive Bayes Model}
+\begin{tabular}{c|cc}
+\hline
+\textbf{Actual / Predicted} & \textbf{0} & \textbf{1} \\
+\hline
+\textbf{0} & 43 & 27 \\
+\textbf{1} & 15 & 219 \\
+\hline
+\end{tabular}
+\end{table}
+
+From confusion matrix of the final ensemble model,
+we can compute the accuracy for predicting each label.
+
+For predicting label 0, the accuracy is
+
+\[
+\frac{43}{43+27}=\frac{43}{70}=0.614
+\]
+
+For predicting label 1, the accuracy is
+
+\[
+\frac{219}{219+15}=\frac{219}{234}=0.936
+\]
+
+\begin{table}[h]
+\centering
+\caption{Class-wise Accuracy of Ensemble Naive Bayes Model}
+\begin{tabular}{lc}
+\hline
+Class & Accuracy \\
+\hline
+Label 0 & 0.614 \\
+Label 1 & 0.936 \\
+\hline
+\end{tabular}
+\end{table}
+
+\newpage
+
+This gives a relatively good accuracy for the ensemble model to predict a
+label 0 class given that the test set has more samples (15\%).
+
+Thus we choose this simple ensemble Gaussian + Bernoulli Naive Bayes Model
+as our final Naive Bayes model for our slected model 3.
+
+We gave the following metrics for it:
+
+\begin{table}[h]
+\centering
+\caption{Test Performance of Ensemble Naive Bayes Model}
+\begin{tabular}{lc}
+\hline
+Metric & Value \\
+\hline
+Test Accuracy & 0.8618 \\
+F1 Score & 0.8571 \\
+AUROC Score & 0.8326 \\
+\hline
+\end{tabular}
+\end{table}
+
+
+
+
+\end{document}
