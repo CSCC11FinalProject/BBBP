@@ -1,0 +1,78 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\begin{document}
+
+\section*{Random Forest Hyperparameter Tuning Log}
+
+
+
+\subsection*{Tuning Summary}
+
+\begin{table}[htbp]
+\centering
+\label{tab:rf_tuning_summary}
+\begin{tabular}{@{}llp{6cm}@{}}
+\toprule
+\textbf{Run} & \textbf{Parameter Grid} & \textbf{Outcome \& Strategy} \\
+\midrule
+1 & \textit{n\_estimators}: [100, 200, 300] \newline
+    \textit{max\_depth}: [None, 10, 20] \newline
+    \textit{min\_samples\_split}: [2, 5, 10] & 
+    Hit lower boundary for \textit{n\_estimators} (100) and upper unconstrained boundary for \textit{max\_depth} (None). We keep \textit{min\_samples\_split} at 5 and test estimators below 100 and higher depths. \\
+\midrule
+2 & \textit{n\_estimators}: [50, 100, 150] \newline
+    \textit{max\_depth}: [None, 30, 40] \newline
+    \textit{min\_samples\_split}: [3, 5, 7] & 
+    The model converged on the exact same parameters: \textit{n\_estimators}=100, \textit{max\_depth}=None, \textit{min\_samples\_split}=5. Thus we conclude the optimal parameters. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Run 1 Evaluation}
+
+\textbf{Best Hyperparameters:} \verb|{'max_depth': None, 'min_samples_split': 5, 'n_estimators': 100}|\\
+\textbf{Test AUC-ROC Score:} 0.8929
+
+\begin{table}[htbp]
+\centering
+\label{tab:rf_class_report_1}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Support} \\
+\midrule
+0 (Non-Permeable) & 0.87 & 0.69 & 0.77 & 70 \\
+1 (Permeable)     & 0.91 & 0.97 & 0.94 & 234 \\
+\midrule
+\textbf{Accuracy}     &      &      & 0.90 & 304 \\
+\textbf{Macro Avg}    & 0.89 & 0.83 & 0.85 & 304 \\
+\textbf{Weighted Avg} & 0.90 & 0.90 & 0.90 & 304 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Run 2 Evaluation}
+
+\textbf{Best Hyperparameters:} \verb|{'max_depth': None, 'min_samples_split': 5, 'n_estimators': 100}|\\
+\textbf{Test AUC-ROC Score:} 0.8929
+
+\begin{table}[htbp]
+\centering
+\label{tab:rf_class_report_final}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Support} \\
+\midrule
+0 (Non-Permeable) & 0.87 & 0.69 & 0.77 & 70 \\
+1 (Permeable)     & 0.91 & 0.97 & 0.94 & 234 \\
+\midrule
+\textbf{Accuracy}     &      &      & 0.90 & 304 \\
+\textbf{Macro Avg}    & 0.89 & 0.83 & 0.85 & 304 \\
+\textbf{Weighted Avg} & 0.90 & 0.90 & 0.90 & 304 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
