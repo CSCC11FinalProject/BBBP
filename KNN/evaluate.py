@@ -1,22 +1,15 @@
-# evaluate.py — Comprehensive evaluation and visualization of the test set
-#
-# Outputs following the structure of MPNN/evaluate.py:
-#   1. Core metrics: AUC-ROC, F1, Precision, Recall, Specificity
-#   2. Confusion matrix heatmap → plots/confusion_matrix.png
-#   3. ROC curve → plots/roc_curve.png
-#   4. False Positive misclassification analysis → plots/false_positives.csv, false_positive_summary.csv
-#   5. False Positive molecular structure plot → plots/false_positives_structures.png
+# evaluate.py - full test-set evaluation with plots and false positive analysis
 
 import os
 import joblib  # type: ignore
-import numpy as np  # type: ignore
-import pandas as pd  # type: ignore
-import matplotlib.pyplot as plt  # type: ignore
-import seaborn as sns  # type: ignore
-from sklearn.metrics import (  # type: ignore
+import numpy as np
+import pandas as pd
+from sklearn.metrics import (
     roc_auc_score, f1_score, precision_score, recall_score,
     confusion_matrix, roc_curve,
 )
+import matplotlib.pyplot as plt  # type: ignore
+import seaborn as sns  # type: ignore
 
 from rdkit import Chem  # type: ignore
 from rdkit.Chem import Draw  # type: ignore
@@ -29,7 +22,6 @@ PLOTS_DIR = os.path.join(BASE_DIR, "plots")
 
 
 def load_model():
-    """Load a trained KNN model from checkpoint."""
     path = os.path.join(CHECKPOINT_DIR, "knn_model.joblib")
     return joblib.load(path)
 
@@ -40,9 +32,8 @@ def investigate_false_positives(
     y_pred: np.ndarray,
     y_prob: np.ndarray,
 ) -> None:
-    """Analyze false positives: actually BBB- (non-permeable) but predicted as BBB+ (permeable).
-
-    Output format is consistent with the function of the same name in MPNN/evaluate.py.
+    """Analyze false positives: actually BBB- but predicted BBB+.
+    Saves detailed CSV and molecular structure grid.
     """
     df = test_df.copy()
     df["prob"] = y_prob
@@ -59,7 +50,6 @@ def investigate_false_positives(
 
     print(fps[["name", "smiles", "LogP", "TPSA", "MW", "prob"]])
 
-    # Compare means of key chemical descriptors between FP and TN
     comparison = pd.DataFrame({
         "Feature": ["LogP", "TPSA", "MW"],
         "False Positives (Mistakes)": [
@@ -71,39 +61,35 @@ def investigate_false_positives(
     })
     print("\n", comparison.to_string(index=False))
 
-    # Save to CSV
     fps.to_csv(os.path.join(PLOTS_DIR, "false_positives.csv"), index=False)
     comparison.to_csv(os.path.join(PLOTS_DIR, "false_positive_summary.csv"), index=False)
 
-    # Plot molecular structures for FPs (display up to 9)
-    mols = [Chem.MolFromSmiles(s) for s in fps["smiles"]]
-    mols = [m for m in mols if m is not None]
-    if mols:
-        legends = [f"Prob: {p:.2f}" for p in fps["prob"]]
+    # Draw molecular structures for up to 9 false positives
+    pairs = [(Chem.MolFromSmiles(s), prob) for s, prob in zip(fps["smiles"], fps["prob"])]
+    pairs = [(m, prob) for m, prob in pairs if m is not None]
+    if pairs:
+        mols, probs = zip(*pairs)
+        legends = [f"Prob: {p:.2f}" for p in probs]
         img = Draw.MolsToGridImage(
-            mols[:9], molsPerRow=3, subImgSize=(300, 300), legends=legends[:9],
+            list(mols)[:9], molsPerRow=3, subImgSize=(300, 300), legends=legends[:9],
         )
         img.save(os.path.join(PLOTS_DIR, "false_positives_structures.png"))
         print(f"False positive structures saved to {PLOTS_DIR}/false_positives_structures.png")
 
 
-def evaluate_on_test() -> None:
-    """Main evaluation pipeline: load model and data → compute metrics → plot → analyze misclassification."""
+def evaluate_on_test():
+    """Load model, compute metrics on test set, generate plots, analyze misclassifications."""
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
-    # -- Load data and model --
     data = load_and_preprocess()
-    X_test = data["X_test"]
-    y_test = data["y_test"]
+    X_test, y_test = data["X_test"], data["y_test"]
     test_df = data["test_df"]
 
     knn = load_model()
 
-    # -- Prediction --
     y_prob = knn.predict_proba(X_test)[:, 1]
     y_pred = (y_prob >= 0.5).astype(int)
 
-    # -- Core metrics --
     test_auc = roc_auc_score(y_test, y_prob)
     test_f1 = f1_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
@@ -121,7 +107,7 @@ def evaluate_on_test() -> None:
         f"Specificity: {specificity:.4f}"
     )
 
-    # -- Confusion matrix --
+    # Confusion matrix
     plt.figure(figsize=(4, 4))
     sns.heatmap(
         cm, annot=True, fmt="d", cmap="Blues",
@@ -134,7 +120,7 @@ def evaluate_on_test() -> None:
     plt.savefig(os.path.join(PLOTS_DIR, "confusion_matrix.png"), dpi=150)
     plt.close()
 
-    # -- ROC curve --
+    # ROC curve
     fpr, tpr, _ = roc_curve(y_test, y_prob)
     plt.figure(figsize=(4, 4))
     plt.plot(fpr, tpr, label=f"AUC = {test_auc:.3f}")
@@ -149,7 +135,6 @@ def evaluate_on_test() -> None:
 
     print(f"\nPlots saved to {PLOTS_DIR}/")
 
-    # -- False Positive analysis --
     investigate_false_positives(test_df, y_test, y_pred, y_prob)
 
 
