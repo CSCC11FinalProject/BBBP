@@ -61,14 +61,12 @@ def load_model(device: torch.device) -> MPNN:
     checkpoint = torch.load(CHECKPOINT_PATH, map_location=device)
     state = checkpoint.get("state_dict", checkpoint)
 
-    model = MPNN(
-        atom_dim=29,
-        bond_dim=7,
-        tabular_dim=7,
-        message_units=64,
-        message_steps=4,
-        num_attention_heads=8,
-        dense_units=512,
+    model = MPNN( # from optuna ouptut
+        message_units = 64, 
+        message_steps = 4, 
+        num_attention_heads = 8, 
+        dense_units = 512,
+        fusion_dropout = 0.2,
     ).to(device)
     model.load_state_dict(state, strict=False)
     return model
