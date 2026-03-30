@@ -7,13 +7,14 @@ from torch_geometric.utils import to_dense_batch # type: ignore
 class MPNN(nn.Module):
     def __init__(
         self, 
+        message_units: int, 
+        message_steps: int, 
+        num_attention_heads: int, 
+        dense_units: int,
+        fusion_dropout: float,
         atom_dim: int = 29, 
         bond_dim: int = 7, 
         tabular_dim: int = 7,
-        message_units: int = 64, 
-        message_steps: int = 4, 
-        num_attention_heads: int = 8, 
-        dense_units: int = 512
     ):
         super(MPNN, self).__init__()
         self.message_steps = message_steps
@@ -43,7 +44,7 @@ class MPNN(nn.Module):
         self.classification = nn.Sequential(
             nn.Linear(self.node_dim + tabular_dim, dense_units),
             nn.ReLU(),
-            nn.Dropout(0.2), 
+            nn.Dropout(fusion_dropout), 
             nn.Linear(dense_units, 1)
         )
 
