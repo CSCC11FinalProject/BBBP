@@ -99,11 +99,11 @@ if __name__ == "__main__":
     pos_weight = torch.tensor([n_neg / n_pos], dtype=torch.float, device=device)
     
     model = MPNN( # from optuna ouptut
-        message_units = 64, 
+        message_units = 128, 
         message_steps = 4, 
-        num_attention_heads = 8, 
+        num_attention_heads = 4, 
         dense_units = 512,
-        fusion_dropout = 0.2,
+        fusion_dropout = 0.3,
     ).to(device)
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
