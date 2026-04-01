@@ -21,31 +21,31 @@
 1 & \textit{n\_estimators}: [100, 200, 300] \newline
     \textit{max\_depth}: [None, 10, 20] \newline
     \textit{min\_samples\_split}: [2, 5, 10] & 
-    Hit lower boundary for \textit{n\_estimators} (100) and upper unconstrained boundary for \textit{max\_depth} (None). We keep \textit{min\_samples\_split} around 5 and test estimators below 100 and higher depths. \\
+    Hit upper boundary for \textit{max\_depth} (20) and lower boundary for \textit{min\_samples\_split} (2). We test \textit{min\_samples\_split} around 2 and test estimators around 200. \\
 \midrule
-2 & \textit{n\_estimators}: [50, 100, 150] \newline
-    \textit{max\_depth}: [None, 30, 40] \newline
-    \textit{min\_samples\_split}: [3, 5, 7] & 
-    We get the exact same parameters. We narrow the range for \textit{n\_estimators} and \textit{min\_samples\_split}, and find optimal \textit{max\_depth} above 40\\
+2 & \textit{n\_estimators}: [150, 200, 250] \newline
+    \textit{max\_depth}: [None, 10, 20] \newline
+    \textit{min\_samples\_split}: [2, 3, 4] & 
+    We get the exact same estimators and max\_depth, but a new min\_samples\_split (4). We narrow the range for \textit{n\_estimators} and \textit{max\_depth}.\\
 \midrule
-3 & \textit{n\_estimators}: [90, 100, 110] \newline
-    \textit{max\_depth}: [None, 50, 60] \newline
-    \textit{min\_samples\_split}: [4, 5, 6] & 
-    We try \textit{n\_estimators} around 90, and keep trying bigger \textit{max\_depth} \\
+3 & \textit{n\_estimators}: [180, 200, 220] \newline
+    \textit{max\_depth}: [15, 20, 25] \newline
+    \textit{min\_samples\_split}: [2, 3, 4, 5] & 
+    New optimal \textit{n\_estimators} is 180, and \textit{max\_depth} is 15. We try \textit{n\_estimators} around 180, and keep trying smaller \textit{max\_depth}. \\
 \midrule
-4 & \textit{n\_estimators}: [85, 90, 95] \newline
-    \textit{max\_depth}: [None, 70, 80] \newline
-    \textit{min\_samples\_split}: [4, 5, 6] & 
-    New optimal \textit{n\_estimators} is 85, but Test F1 dropped to 0.9400. Potential overfitting, we conclude the optimal hyperparameteres from Run 3. \\
+4 & \textit{n\_estimators}: [170, 180, 190] \newline
+    \textit{max\_depth}: [10, 15, 20] \newline
+    \textit{min\_samples\_split}: [2, 3, 4, 5] & 
+    New optimal \textit{n\_estimators} is 170. Performance is slightly better but converging. We conclude the optimal hyperparameters from Run 4. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection*{Run 1 Evaluation}
 
-\textbf{Best Hyperparameters:} \verb|{'max_depth': None, 'min_samples_split': 5, 'n_estimators': 100}|\\
-\textbf{Test AUC-ROC Score:} 0.8929\\
-\textbf{F1-Score:} 0.9400
+\textbf{Best Hyperparameters:} \verb|{'max_depth': 20, 'min_samples_split': 2, 'n_estimators': 200}|\\
+\textbf{Test AUC-ROC Score:} 0.9125\\
+\textbf{F1-Score:} 0.9174
 
 \begin{table}[htbp]
 \centering
@@ -54,58 +54,58 @@
 \toprule
 \textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Support} \\
 \midrule
-0 (Non-Permeable) & 0.87 & 0.69 & 0.77 & 70 \\
-1 (Permeable)     & 0.91 & 0.97 & 0.94 & 234 \\
+0 (Non-Permeable) & 0.78 & 0.60 & 0.68 & 70 \\
+1 (Permeable)     & 0.89 & 0.95 & 0.92 & 234 \\
 \midrule
-\textbf{Accuracy}     &      &      & 0.90 & 304 \\
-\textbf{Macro Avg}    & 0.89 & 0.83 & 0.85 & 304 \\
-\textbf{Weighted Avg} & 0.90 & 0.90 & 0.90 & 304 \\
+\textbf{Accuracy}     &      &      & 0.87 & 304 \\
+\textbf{Macro Avg}    & 0.83 & 0.77 & 0.80 & 304 \\
+\textbf{Weighted Avg} & 0.86 & 0.87 & 0.86 & 304 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection*{Run 2 Evaluation}
 
-\textbf{Best Hyperparameters:} \verb|{'max_depth': None, 'min_samples_split': 5, 'n_estimators': 100}|\\
-\textbf{Test AUC-ROC Score:} 0.8929\\
-\textbf{F1-Score:} 0.9400
+\textbf{Best Hyperparameters:} \verb|{'max_depth': 20, 'min_samples_split': 4, 'n_estimators': 200}|\\
+\textbf{Test AUC-ROC Score:} 0.9094\\
+\textbf{F1-Score:} 0.9196
 
 \begin{table}[htbp]
 \centering
-\label{tab:rf_class_report_final}
+\label{tab:rf_class_report_2}
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Support} \\
 \midrule
-0 (Non-Permeable) & 0.87 & 0.69 & 0.77 & 70 \\
-1 (Permeable)     & 0.91 & 0.97 & 0.94 & 234 \\
+0 (Non-Permeable) & 0.79 & 0.60 & 0.68 & 70 \\
+1 (Permeable)     & 0.89 & 0.95 & 0.92 & 234 \\
 \midrule
-\textbf{Accuracy}     &      &      & 0.90 & 304 \\
-\textbf{Macro Avg}    & 0.89 & 0.83 & 0.85 & 304 \\
-\textbf{Weighted Avg} & 0.90 & 0.90 & 0.90 & 304 \\
+\textbf{Accuracy}     &      &      & 0.87 & 304 \\
+\textbf{Macro Avg}    & 0.84 & 0.78 & 0.80 & 304 \\
+\textbf{Weighted Avg} & 0.87 & 0.87 & 0.87 & 304 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection*{Run 3 Evaluation}
 
-\textbf{Best Hyperparameters:} \verb|{'max_depth': None, 'min_samples_split': 5, 'n_estimators': 90}|\\
-\textbf{Test AUC-ROC Score:} 0.8927\\
-\textbf{F1-Score:} 0.9419
+\textbf{Best Hyperparameters:} \verb|{'max_depth': 15, 'min_samples_split': 2, 'n_estimators': 180}|\\
+\textbf{Test AUC-ROC Score:} 0.9097\\
+\textbf{F1-Score:} 0.9215
 
 \begin{table}[htbp]
 \centering
-\label{tab:rf_class_report_final}
+\label{tab:rf_class_report_3}
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Support} \\
 \midrule
-0 (Non-Permeable) & 0.88 & 0.70 & 0.78 & 70 \\
-1 (Permeable)     & 0.92 & 0.97 & 0.94 & 234 \\
+0 (Non-Permeable) & 0.80 & 0.61 & 0.69 & 70 \\
+1 (Permeable)     & 0.89 & 0.95 & 0.92 & 234 \\
 \midrule
-\textbf{Accuracy}     &      &      & 0.91 & 304 \\
-\textbf{Macro Avg}    & 0.90 & 0.84 & 0.86 & 304 \\
-\textbf{Weighted Avg} & 0.91 & 0.91 & 0.90 & 304 \\
+\textbf{Accuracy}     &      &      & 0.88 & 304 \\
+\textbf{Macro Avg}    & 0.84 & 0.78 & 0.81 & 304 \\
+\textbf{Weighted Avg} & 0.87 & 0.88 & 0.87 & 304 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -113,9 +113,9 @@
 
 \subsection*{Run 4 Evaluation}
 
-\textbf{Best Hyperparameters:} \verb|{'max_depth': None, 'min_samples_split': 5, 'n_estimators': 85}|\\
-\textbf{Test AUC-ROC Score:} 0.8926\\
-\textbf{F1-Score:} 0.9400
+\textbf{Best Hyperparameters:} \verb|{'max_depth': 15, 'min_samples_split': 2, 'n_estimators': 170}|\\
+\textbf{Test AUC-ROC Score:} 0.9107\\
+\textbf{F1-Score:} 0.9218
 
 \begin{table}[htbp]
 \centering
@@ -124,12 +124,12 @@
 \toprule
 \textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Support} \\
 \midrule
-0 (Non-Permeable) & 0.87 & 0.69 & 0.77 & 70 \\
-1 (Permeable)     & 0.91 & 0.97 & 0.94 & 234 \\
+0 (Non-Permeable) & 0.81 & 0.60 & 0.69 & 70 \\
+1 (Permeable)     & 0.89 & 0.96 & 0.92 & 234 \\
 \midrule
-\textbf{Accuracy}     &      &      & 0.90 & 304 \\
-\textbf{Macro Avg}    & 0.89 & 0.83 & 0.85 & 304 \\
-\textbf{Weighted Avg} & 0.90 & 0.90 & 0.90 & 304 \\
+\textbf{Accuracy}     &      &      & 0.88 & 304 \\
+\textbf{Macro Avg}    & 0.85 & 0.78 & 0.81 & 304 \\
+\textbf{Weighted Avg} & 0.87 & 0.88 & 0.87 & 304 \\
 \bottomrule
 \end{tabular}
 \end{table}
