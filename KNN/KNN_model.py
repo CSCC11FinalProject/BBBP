@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
@@ -53,7 +55,8 @@ def analyze_model_performance(y_test, y_pred, y_prob):
     print(f"Recall: {recall:.4f}")
     print(f"Precision: {precision:.4f}")
 
-def visualize_roc_curve(y_test, y_prob):
+def visualize_roc_curve(y_test, y_prob, y_pred):
+    # plot the roc curve
     auc = roc_auc_score(y_test, y_prob)
     fpr, tpr, _ = roc_curve(y_test, y_prob)
     plt.figure(figsize=(4, 4))
@@ -65,6 +68,15 @@ def visualize_roc_curve(y_test, y_prob):
     plt.legend(loc="lower right")
     plt.savefig("KNN/plots/roc_curve.png")
     plt.close()
+    # plot the confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(4, 4))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=["BBB-", "BBB+"], yticklabels=["BBB-", "BBB+"])
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.title("Confusion Matrix (Test Set)")
+    plt.savefig("KNN/plots/confusion_matrix.png")
+    plt.close()
 
 def main():
     df = pd.read_csv("./dataset/BBBP.csv")
@@ -74,7 +86,7 @@ def main():
     y_pred = final_model.predict(X_test_scaled)
     y_prob = final_model.predict_proba(X_test_scaled)[:, 1]
     analyze_model_performance(y_test, y_pred, y_prob)
-    visualize_roc_curve(y_test, y_prob)
+    visualize_roc_curve(y_test, y_prob, y_pred)
 
 if __name__ == "__main__":
     main()
