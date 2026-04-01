@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score, roc_auc_score, roc_curve
+from sklearn.metrics import f1_score, roc_auc_score, roc_curve, recall_score, precision_score
 import matplotlib.pyplot as plt
 
 SEED = 67
@@ -46,8 +46,12 @@ def tune_model(X_train_scaled, y_train_model, X_val_scaled, y_val):
 def analyze_model_performance(y_test, y_pred, y_prob):
     f1 = f1_score(y_test, y_pred)
     auc = roc_auc_score(y_test, y_prob)
+    recall = recall_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
     print(f"F1 Score: {f1:.4f}")
     print(f"AUC: {auc:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"Precision: {precision:.4f}")
 
 def visualize_roc_curve(y_test, y_prob):
     auc = roc_auc_score(y_test, y_prob)
