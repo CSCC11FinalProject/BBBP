@@ -1,4 +1,4 @@
-# Random Forest (RF) for Blood-Brain Barrier Permeability (BBBP) Prediction
+# Naive Bayes (NB) model for Blood-Brain Barrier Permeability (BBBP) Prediction
 ## Installation and Prerequisites
 Libraries are stated at the beginning of the corresponding .py code
 Only thing you needed is the BBBP.csv file.
