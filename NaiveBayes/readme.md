@@ -1,4 +1,7 @@
-Only a naive version for Naive Bayes report part, I'll polish my literature when eveyone's report piece is alomost ready.
-I'll have a rest from now on.
+# RUNNNING INSTRUCTIONS:
 
-NB Finished Version, using same whole dataset, with different feature engineering
+# Things needed to run this file:
+You only need to modify the path of the BBBP.csv file at the beginning.
+
+# directly run it.
+directly run it! you will see outputs or plots generated from the code!
