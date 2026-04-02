@@ -32,7 +32,7 @@ def tune_model(X_train_scaled, y_train_model, X_val_scaled, y_val):
     for k in k_values:
         knn = KNeighborsClassifier(n_neighbors=k)
         knn.fit(X_train_scaled, y_train_model)
-        y_prob_val = knn.predict_proba(X_val_scaled)[:, 1]  # 用概率
+        y_prob_val = knn.predict_proba(X_val_scaled)[:, 1]
         auc = roc_auc_score(y_val, y_prob_val)
         if auc > best_auc:
             best_auc = auc
