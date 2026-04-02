@@ -52,3 +52,14 @@ From the project root, run:
 
 ```bash
 python KNN/KNN_model.py
+```
+
+## Results
+
+- F1 Score: 0.9032
+
+- AUC: 0.8495
+
+- Recall: 0.9573
+
+- Precision: 0.8550
