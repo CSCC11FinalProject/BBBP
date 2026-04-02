@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score, roc_auc_score, roc_curve
+from sklearn.metrics import f1_score, roc_auc_score, roc_curve, recall_score, precision_score
 import matplotlib.pyplot as plt
 
 SEED = 67
@@ -30,7 +32,7 @@ def tune_model(X_train_scaled, y_train_model, X_val_scaled, y_val):
     for k in k_values:
         knn = KNeighborsClassifier(n_neighbors=k)
         knn.fit(X_train_scaled, y_train_model)
-        y_prob_val = knn.predict_proba(X_val_scaled)[:, 1]  # 用概率
+        y_prob_val = knn.predict_proba(X_val_scaled)[:, 1]
         auc = roc_auc_score(y_val, y_prob_val)
         if auc > best_auc:
             best_auc = auc
@@ -46,10 +48,15 @@ def tune_model(X_train_scaled, y_train_model, X_val_scaled, y_val):
 def analyze_model_performance(y_test, y_pred, y_prob):
     f1 = f1_score(y_test, y_pred)
     auc = roc_auc_score(y_test, y_prob)
+    recall = recall_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
     print(f"F1 Score: {f1:.4f}")
     print(f"AUC: {auc:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"Precision: {precision:.4f}")
 
-def visualize_roc_curve(y_test, y_prob):
+def visualize_roc_curve(y_test, y_prob, y_pred):
+    # plot the roc curve
     auc = roc_auc_score(y_test, y_prob)
     fpr, tpr, _ = roc_curve(y_test, y_prob)
     plt.figure(figsize=(4, 4))
@@ -61,6 +68,15 @@ def visualize_roc_curve(y_test, y_prob):
     plt.legend(loc="lower right")
     plt.savefig("KNN/plots/roc_curve.png")
     plt.close()
+    # plot the confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(4, 4))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=["BBB-", "BBB+"], yticklabels=["BBB-", "BBB+"])
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.title("Confusion Matrix (Test Set)")
+    plt.savefig("KNN/plots/confusion_matrix.png")
+    plt.close()
 
 def main():
     df = pd.read_csv("./dataset/BBBP.csv")
@@ -70,7 +86,7 @@ def main():
     y_pred = final_model.predict(X_test_scaled)
     y_prob = final_model.predict_proba(X_test_scaled)[:, 1]
     analyze_model_performance(y_test, y_pred, y_prob)
-    visualize_roc_curve(y_test, y_prob)
+    visualize_roc_curve(y_test, y_prob, y_pred)
 
 if __name__ == "__main__":
     main()
