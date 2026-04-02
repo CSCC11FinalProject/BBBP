@@ -12,7 +12,7 @@ from torchmetrics import AUROC, F1Score  # type: ignore
 from tqdm import tqdm  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 
-# --- STRICT SEEDING TO LOCK RESULTS ---
+# SEEDING
 SEED = 67
 random.seed(SEED)
 np.random.seed(SEED)

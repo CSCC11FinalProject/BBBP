@@ -5,6 +5,7 @@ import torch # type: ignore
 import numpy as np # type: ignore
 from torch_geometric.data import Data # type: ignore
 
+# Adapted from https://keras.io/examples/graph/mpnn-molecular-graphs/ for PyTorch
 class AtomFeaturizer:
     def __init__(self):
         self.symbols = ["B", "Br", "C", "Ca", "Cl", "F", "H", "I", "N", "Na", "O", "P", "S"]

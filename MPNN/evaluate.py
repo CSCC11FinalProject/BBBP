@@ -1,3 +1,5 @@
+# evaluation script to get the confusion matrix and false positive analysis
+
 from dataloader import BBBPDataset
 from mpnn import MPNN
 

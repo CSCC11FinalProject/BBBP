@@ -4,6 +4,9 @@ from torch_geometric.nn import NNConv # type: ignore
 from torch_geometric.data import Data # type: ignore
 from torch_geometric.utils import to_dense_batch # type: ignore
 
+# Adapted from https://keras.io/examples/graph/mpnn-molecular-graphs/
+# See https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.NNConv.html?highlight=nncon#torch_geometric.nn.conv.NNConv
+
 class MPNN(nn.Module):
     def __init__(
         self, 
@@ -40,7 +43,6 @@ class MPNN(nn.Module):
         self.layernorm_1 = nn.LayerNorm(self.node_dim)
         self.layernorm_2 = nn.LayerNorm(self.node_dim)
         
-        # FUSION: Transformer output (node_dim) + your tabular features (tabular_dim)
         self.classification = nn.Sequential(
             nn.Linear(self.node_dim + tabular_dim, dense_units),
             nn.ReLU(),
