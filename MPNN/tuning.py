@@ -150,12 +150,12 @@ def objective(trial: optuna.Trial) -> float:
 
 
 if __name__ == "__main__":
-    n_trials = 16 
+    n_trials = 16 # restruct to a random subset because hyperparameter tuning takes HOURS
     study = optuna.create_study(
-        direction="maximize",
+        direction="maximize", # to maximize auroc
         study_name="mpnn_bbbp",
         sampler=optuna.samplers.TPESampler(multivariate=True, group=True),
-        pruner=optuna.pruners.MedianPruner(n_startup_trials=3, n_warmup_steps=5),
+        pruner=optuna.pruners.MedianPruner(n_startup_trials=3, n_warmup_steps=5), # prunes bad trials
     )
     
     # Define search space statically for Optuna to resolve multiprocessing correctly
@@ -166,6 +166,7 @@ if __name__ == "__main__":
     print("  Params:", study.best_params)
 
     # Train final model with best params and save
+    # this may vary based on runs, so we ran it 3 times and compared the 3 best models
     best = study.best_params
     if torch.backends.mps.is_available():
         device = torch.device("mps")

@@ -4,7 +4,7 @@ from torch_geometric.nn import NNConv # type: ignore
 from torch_geometric.data import Data # type: ignore
 from torch_geometric.utils import to_dense_batch # type: ignore
 
-# Adapted from https://keras.io/examples/graph/mpnn-molecular-graphs/
+# Adapted from https://keras.io/examples/graph/mpnn-molecular-graphs/ to use pytorch for mac gpu support
 # See https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.NNConv.html?highlight=nncon#torch_geometric.nn.conv.NNConv
 
 class MPNN(nn.Module):
@@ -34,7 +34,7 @@ class MPNN(nn.Module):
             embed_dim=self.node_dim, 
             num_heads=num_attention_heads, 
             batch_first=True
-        )
+        ) # attention mechanism
         self.dense_proj = nn.Sequential(
             nn.Linear(self.node_dim, dense_units),
             nn.ReLU(),

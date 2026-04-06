@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore")
 class BBBPDataset(Dataset):
     def __init__(self, csv_file: str, usecols: list[str] | None = None):
         super().__init__()
-        if usecols is None:
+        if usecols is None: # the physicochemical descriptors chosen for this model
             usecols = [
                 "smiles",
                 "p_np",
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     os.makedirs(plots_dir, exist_ok=True)
 
     df = dataset.df
-    sns.set_theme(style="darkgrid")
+    sns.set_theme(style="darkgrid") # i like this theme
 
     # class distribution
     plt.figure(figsize=(6, 4))
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     corr_cols = ["LogP", "TPSA", "MW", "HBA", "HBD", "RotatableBonds", "Charge", "p_np"]
     numerical_df = df[corr_cols]
     corr = numerical_df.corr()
-    sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5)
+    sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5) # displays the actual values
     plt.title("Feature Correlation Matrix")
     plt.tight_layout()
     plt.savefig(os.path.join(plots_dir, "correlation_matrix.png"))

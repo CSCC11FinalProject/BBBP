@@ -13,7 +13,7 @@ The project is organized into model-specific directories, each containing its ow
 * `RandomForest/`: Random Forest classifier implementation utilizing 2048-bit Morgan Fingerprints.
 * `MPNN/`: Message-Passing Neural Network featuring graph convolutions (`NNConv`), GRU state updates, and self-attention pooling. 
 
-Each folder contains the scripts necessary to tune, train and evaluate the model.
+Each folder contains the scripts necessary to tune, train and evaluate the model. 
 
 
 ## Installation and Setup

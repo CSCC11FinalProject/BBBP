@@ -10,6 +10,7 @@ from torch_geometric.loader import DataLoader  # type: ignore
 from torch.utils.data import random_split  # type: ignore
 from torchmetrics import AUROC, F1Score  # type: ignore
 from tqdm import tqdm  # type: ignore
+# tqdm gives nice progress bars to show training advancement
 import matplotlib.pyplot as plt  # type: ignore
 
 # SEEDING
@@ -23,7 +24,7 @@ CSV_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV     = os.path.join(CSV_DIR, '..', 'dataset', 'BBBP.csv')
 CHECKPOINT_DIR = os.path.join(CSV_DIR, 'checkpoints')
 PLOTS_DIR = os.path.join(CSV_DIR, 'plots')
-PATIENCE = 10
+PATIENCE = 10 # number of epochs without imporvement to wait before quitting
 
 def train_epoch(model: MPNN, loader: DataLoader, optimizer: torch.optim.Optimizer,
                 criterion: nn.Module, device: torch.device, epoch: int) -> float:
@@ -41,6 +42,7 @@ def train_epoch(model: MPNN, loader: DataLoader, optimizer: torch.optim.Optimize
         pbar.set_postfix(loss=f"{loss.item():.4f}")
     return total_loss / len(loader.dataset)
 
+# evaluates the model on a dataset (for validation and testing)
 def evaluate(
     model: MPNN,
     loader: DataLoader,
@@ -115,7 +117,7 @@ if __name__ == "__main__":
     best_val_auc = 0.0
     best_state = None
     epochs_no_improve = 0
-    checkpoint_path = os.path.join(CHECKPOINT_DIR, 'best.pt')
+    checkpoint_path = os.path.join(CHECKPOINT_DIR, 'best.pt') # save best weight for evaluation
 
     epochs_tracked: list[int] = []
     train_losses: list[float] = []
@@ -147,7 +149,8 @@ if __name__ == "__main__":
             print(f"Early stopping at epoch {epoch} (no val AUC improvement for {PATIENCE} epochs).")
             break
 
-    if epochs_tracked:
+    if epochs_tracked: # save the loss every epoch to plot
+        # we didny end up using this
         plt.figure(figsize=(6, 4))
         plt.plot(epochs_tracked, train_losses, label="Train loss")
         plt.plot(epochs_tracked, val_losses, label="Val loss")
@@ -163,5 +166,6 @@ if __name__ == "__main__":
         model.load_state_dict(best_state)
         model.to(device)
     print(f"Best model loaded from {checkpoint_path}")
+    # runs model on test set but does NOT compute any metrics or save figures
     test_loss, test_auc, test_f1 = evaluate(model, test_loader, criterion, device)
     print(f"\nTest loss: {test_loss:.4f} | Test AUC-ROC: {test_auc:.4f} | Test F1: {test_f1:.4f}")

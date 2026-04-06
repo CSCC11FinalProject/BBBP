@@ -55,6 +55,7 @@ class BondFeaturizer:
 atom_featurizer = AtomFeaturizer()
 bond_featurizer = BondFeaturizer()
 
+# converts smiles string into a graph for the mpnn
 def smiles_to_graph(smiles: str, target: float, extra_features: list[float]) -> Data | None:
     mol = Chem.MolFromSmiles(smiles, sanitize=False)
     if mol is None: return None

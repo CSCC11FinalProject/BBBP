@@ -39,14 +39,14 @@ def build_test_loader() -> tuple[DataLoader, pd.DataFrame]:
     n_train = int(0.75 * n)
     n_val = int(0.1 * n)
     n_test = n - n_train - n_val
-    _, _, test_ds = torch.utils.data.random_split(  # type: ignore[attr-defined]
+    _, _, test_ds = torch.utils.data.random_split( 
         dataset,
         [n_train, n_val, n_test],
         generator=torch.Generator().manual_seed(SEED),
     )
-    # map back to the underlying CSV rows for analysis
-    test_indices = test_ds.indices  # type: ignore[attr-defined]
-    test_df = dataset.df.iloc[test_indices].reset_index(drop=True)  # type: ignore[attr-defined]
+    # map back to the CSV rows for analysis
+    test_indices = test_ds.indices 
+    test_df = dataset.df.iloc[test_indices].reset_index(drop=True) 
     loader = DataLoader(test_ds, batch_size=32, shuffle=False)
     return loader, test_df
 
@@ -55,10 +55,8 @@ def load_model(device: torch.device) -> MPNN:
     """
     Load the current MPNN architecture and weights.
 
-    We always reconstruct the model using the same defaults as train.py:
-      atom_dim=29, bond_dim=7, tabular_dim=7,
-      message_units=64, message_steps=4,
-      num_attention_heads=8, dense_units=512.
+    We always reconstruct the model using the same defaults as train.py.
+    Otherwise, the saved weights will not match and there will be problems
     """
     checkpoint = torch.load(CHECKPOINT_PATH, map_location=device)
     state = checkpoint.get("state_dict", checkpoint)
@@ -84,7 +82,7 @@ def investigate_false_positives(test_df: pd.DataFrame, probs: np.ndarray) -> Non
 
     print(f"Analyzing {len(fps)} false positives...")
     if fps.empty:
-        return
+        return # ideal case
 
     cols_to_show = [c for c in ["name", "smiles", "LogP", "TPSA", "MW", "probs"] if c in fps.columns]
     print(fps[cols_to_show])
@@ -120,7 +118,7 @@ def investigate_false_positives(test_df: pd.DataFrame, probs: np.ndarray) -> Non
     img = Draw.MolsToGridImage(mols, molsPerRow=3, subImgSize=(300, 300), legends=legends)
     img.save(os.path.join(PLOTS_DIR, "false_positives_structures.png"))
 
-
+# evaluate the model on the test set
 def evaluate_on_test() -> None:
     os.makedirs(PLOTS_DIR, exist_ok=True)
     device = get_device()
@@ -161,6 +159,7 @@ def evaluate_on_test() -> None:
 
     cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
     tn, fp, fn, tp = cm.ravel()
+    # compute metrics and handle zero values
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0  # sensitivity
     specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
@@ -173,7 +172,7 @@ def evaluate_on_test() -> None:
         f"Recall: {recall:.4f} | "
         f"Specificity: {specificity:.4f}"
     )
-
+    # save a plot of confusion matrix
     plt.figure(figsize=(4, 4))
     sns.heatmap(
         cm,
@@ -189,7 +188,7 @@ def evaluate_on_test() -> None:
     plt.tight_layout()
     plt.savefig(os.path.join(PLOTS_DIR, "confusion_matrix.png"))
     plt.close()
-
+    # save the roc curve
     fpr, tpr, _ = roc_curve(y_true, y_prob)
     plt.figure(figsize=(4, 4))
     plt.plot(fpr, tpr, label=f"AUC = {test_auc:.3f}")
@@ -201,9 +200,9 @@ def evaluate_on_test() -> None:
     plt.tight_layout()
     plt.savefig(os.path.join(PLOTS_DIR, "roc_curve.png"))
     plt.close()
-
     # qualitative analysis of false positives on the held-out test set
-    investigate_false_positives(test_df, y_prob)
+    # investigate_false_positives(test_df, y_prob)
+    # ^ didnt use this in report
 
 
 if __name__ == "__main__":
